@@ -1,0 +1,19 @@
+query TournamentsByVideogame($perPage: Int, $videogameId: Int) {
+  tournaments(query: {
+    perPage: $perPage
+    page: 1
+    sortBy: "startAt asc"
+    filter: {
+      past: false
+      videogameIds: [
+        $videogameId
+      ]
+    }
+  }) {
+    nodes {
+      id
+      name
+      slug
+    }
+  }
+}
