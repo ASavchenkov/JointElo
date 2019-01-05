@@ -5,20 +5,20 @@ import numpy as np
 
 #we assume that all of the events are the correct type
 def get_all_phase_groups(event_array):
-    phase_group_ids = list()
+    phase_groups = list()
     failed_event_ids = list()
     for event_id in event_array:
         try:
             event_response = make_query(queries.event, {'id':event_id}) 
             event_json = event_response.json()
             event_json = event_json['data']['event']
-            phase_group_ids.extend([pg['id'] for pg in event_json['phaseGroups']])
-            print(len(phase_group_ids),event_json['name'],len(event_json['phaseGroups']))
+            phase_groups.extend([(event_id, pg['id']) for pg in event_json['phaseGroups']])
+            print(len(phase_groups),event_json['name'],len(event_json['phaseGroups']))
             time.sleep(1)
         except:
             failed_event_ids.append(event_id)
             print('failed: ',event_id)
-    return phase_group_ids,failed_event_ids
+    return phase_groups,failed_event_ids
 
 if __name__ == "__main__":
     event_ids = np.loadtxt('./event_ids.csv')
