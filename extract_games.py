@@ -3,6 +3,12 @@ import os
 import json
 import traceback
 import sys
+
+#while we would like to sort by match time,
+#that information is quite uncommon,
+#thus we assume that a players skill
+#does not change much over a single event
+
 #format of game entries
 #game_id | winner_id | loser_id | winner_pick | loser_pick
 
@@ -24,22 +30,24 @@ def get_matches(event_id):
                             winner_id = game['winnerId']
                             loser_id = game['loserId']
                             sel = game['selections']
-
-                            if(sel!=None and len(sel)!=0):
-                                winner_pick = -1
-                                loser_pick = -1
-                                if(winner_id in sel): 
-                                    winner_pick = sel[str(winner_id)]['character'][0]['selectionValue']
-                                if(loser_id in sel): 
-                                    loser_pick = sel[str(loser_id)]['character'][0]['selectionValue']
-                            else:
-                                winner_pick = -1
-                                loser_pick = -1
-                            games.append((game_id, winner_id, loser_id, winner_pick, loser_pick))
+                            
+                            if(winner_id is not None and loser_id is not None):
+                                if(sel!=None and len(sel)!=0):
+                                    
+                                    winner_pick = -1
+                                    loser_pick = -1
+                                    if(winner_id in sel): 
+                                        winner_pick = sel[str(winner_id)]['character'][0]['selectionValue']
+                                    if(loser_id in sel): 
+                                        loser_pick = sel[str(loser_id)]['character'][0]['selectionValue']
+                                else:
+                                    winner_pick = -1
+                                    loser_pick = -1
+                                games.append((game_id, winner_id, loser_id, winner_pick, loser_pick))
             except Exception :
                 print(dirname+'/'+f)
                 traceback.print_exc(file=sys.stdout)
-    return games 
+    return np.array(games) if len(games)!=0 else None
     
 
 #we do this temporally based on events.
@@ -48,7 +56,11 @@ def get_matches(event_id):
 if __name__ == '__main__':
     
     event_ids = np.loadtxt('./event_ids.csv').astype(np.int64)
-    for i in range(1000):
-        get_matches(event_ids[i])
-    
-    
+    for e_id in event_ids:
+        match_array = get_matches(e_id)
+        if(match_array is not None):
+            # print(e_id)
+            # print(match_array)
+            np.savetxt('./matches/'+str(e_id)+'.csv', match_array.astype(np.int32),fmt='%i', delimiter = ',')
+            # print(len(match_array))
+     
