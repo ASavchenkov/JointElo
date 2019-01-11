@@ -33,12 +33,11 @@ def get_matches(event_id):
                             
                             if(winner_id is not None and loser_id is not None):
                                 if(sel!=None and len(sel)!=0):
-                                    
                                     winner_pick = -1
                                     loser_pick = -1
-                                    if(winner_id in sel): 
+                                    if(str(winner_id) in sel): 
                                         winner_pick = sel[str(winner_id)]['character'][0]['selectionValue']
-                                    if(loser_id in sel): 
+                                    if(str(loser_id) in sel): 
                                         loser_pick = sel[str(loser_id)]['character'][0]['selectionValue']
                                 else:
                                     winner_pick = -1
