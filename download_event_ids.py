@@ -32,4 +32,4 @@ if __name__ == "__main__":
     
     event_array = np.asarray(event_ids,dtype = np.int64)
     print(event_array)
-    np.savetxt('event_ids.csv', event_array.astype(int),fmt='%i', delimiter = ',')
+    np.savetxt('./data/event_ids.csv', event_array.astype(int),fmt='%i', delimiter = ',')

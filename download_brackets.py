@@ -13,10 +13,10 @@ def get_all_sets(phase_group_array):
             print(response)
 
             try:
-                os.mkdir('./brackets/'+str(event_id))
+                os.mkdir('./data/brackets/'+str(event_id))
             except:
                 pass
-            f = open('./brackets/'+str(event_id)+'/'+str(pg_id), 'w')
+            f = open('./data/brackets/'+str(event_id)+'/'+str(pg_id), 'w')
             f.write(response.text)
             print(i,len(phase_group_array))
         except Exception as e:
@@ -25,7 +25,7 @@ def get_all_sets(phase_group_array):
         i+=1
 
 if __name__ == "__main__":
-    phase_group_array = np.loadtxt('./phase_group_ids.csv',delimiter=',').astype(dtype=np.int64)
+    phase_group_array = np.loadtxt('./data/phase_group_ids.csv',delimiter=',').astype(dtype=np.int64)
     print(len(phase_group_array))
     get_all_sets(phase_group_array)
     

@@ -21,11 +21,11 @@ def get_all_phase_groups(event_array):
     return phase_groups,failed_event_ids
 
 if __name__ == "__main__":
-    event_ids = np.loadtxt('./event_ids.csv')
+    event_ids = np.loadtxt('./data/event_ids.csv')
     print(event_ids)
     phase_group_ids,failed_event_ids = get_all_phase_groups(event_ids)
     
     phase_group_array = np.asarray(phase_group_ids,dtype = np.int64)
     failed_event_array = np.asarray(failed_event_ids, dtype= np.int64)
-    np.savetxt('phase_group_ids.csv', phase_group_array.astype(int),fmt='%i', delimiter = ',')
-    np.savetxt('failed_event_ids.csv', failed_event_array.astype(int),fmt='%i', delimiter = ',')
+    np.savetxt('./data/phase_group_ids.csv', phase_group_array.astype(int),fmt='%i', delimiter = ',')
+    np.savetxt('./data/failed_event_ids.csv', failed_event_array.astype(int),fmt='%i', delimiter = ',')

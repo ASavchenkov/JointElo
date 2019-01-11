@@ -13,7 +13,7 @@ import sys
 #game_id | winner_id | loser_id | winner_pick | loser_pick
 
 def get_matches(event_id):
-    dirname ='brackets/'+str(event_id)
+    dirname ='./data/brackets/'+str(event_id)
     games = list()
     for _,dirnames,filenames in os.walk(dirname):
         for f in filenames:
@@ -55,12 +55,12 @@ def get_matches(event_id):
 
 if __name__ == '__main__':
     
-    event_ids = np.loadtxt('./event_ids.csv').astype(np.int64)
+    event_ids = np.loadtxt('./data/event_ids.csv').astype(np.int64)
     for e_id in event_ids:
         match_array = get_matches(e_id)
         if(match_array is not None):
             # print(e_id)
             # print(match_array)
-            np.savetxt('./matches/'+str(e_id)+'.csv', match_array.astype(np.int32),fmt='%i', delimiter = ',')
+            np.savetxt('./data/matches/'+str(e_id)+'.csv', match_array.astype(np.int32),fmt='%i', delimiter = ',')
             # print(len(match_array))
      
