@@ -6,13 +6,47 @@ import pickle
 def prob_calc(rating1, rating2):
     return 1.0 / (1 + np.power(10, (rating2 - rating1) / 400))
 
-#K1 and K2 can either be a vector or scalar, however,
-#SUM(K1) = SUM(K2) must be true for this to be correct.
-def update_rating(winner_rating, loser_rating, K1, K2):
-    prob_win = prob_calc(winner_rating, loser_rating)
-    new_winner_rating = winner_rating + K1 * (1-prob_win)
-    new_loser_rating = loser_rating + K2 * (prob_win-1)
-    print(np.sum(winner_rating+loser_rating)-np.sum(new_winner_rating+new_loser_rating))
+#The previous algorithm was horribly wrong.
+#The actual way to make sure this is correct even for
+#cases where character choice is a PMF, is to "map"
+#each character to each other character, thus simulating
+#every single matchup that could exist.
+
+#we don't do this because we don't need to.
+
+def get_relevant_rating(all_ratings, char_choice):
+    if(char_choice==-1):
+        return np.mean(all_ratings)
+    else:
+        return all_ratings[char_choice]
+
+def distribute_delta(all_ratings, char_choice, delta):
+    if(char_choice == -1):
+        return all_ratings + delta/72
+    else:
+        return all_ratings+np.eye(72)[char_choice]*delta
+
+def update_rating(winner_rating, loser_rating, K, winner_choice, loser_choice):
+    
+    relevant_w_rating = get_relevant_rating(winner_rating, winner_choice)
+    relevant_l_rating = get_relevant_rating(loser_rating, loser_choice)
+
+
+    prob_win = prob_calc(relevant_w_rating, relevant_l_rating)
+    
+    winner_delta = K * (1-prob_win)
+    loser_delta = K * (prob_win-1)
+    #these now need to be distributed
+    
+    new_winner_rating = distribute_delta(winner_rating,winner_choice, winner_delta)
+    new_loser_rating = distribute_delta(loser_rating, loser_choice, loser_delta)
+
+    
+    # error = np.sum(winner_rating+loser_rating)-np.sum(new_winner_rating+new_loser_rating)
+    # if(np.abs(error)>0.0001):
+        # print(new_winner_rating - winner_rating)
+        # print(new_loser_rating - loser_rating)
+        # print()
     return (new_winner_rating, new_loser_rating)
 
 #Most of the data doesn't actually provide choices,
@@ -23,19 +57,11 @@ def update_rating(winner_rating, loser_rating, K1, K2):
 def default_player():
     return [(0,np.ones(72)*1200)]
 
-def set_K(K,char_choice, char_mapping):
-    if(char_choice==-1):
-        # return 0
-        return K/72
-    else:
-        K_arr = np.zeros(72)
-        K_arr[char_mapping[char_choice]] = K
-        return K_arr
-
 #this dictionary is used to figure out
 #which index of the array we should use.
 def get_char_mapping():
     ids = dict()
+    ids[-1] = -1
     with open('./data/char_mapping.csv', 'r') as character_file:
         for i,line in enumerate(character_file.readlines()):
             ids[int(line.split(',')[0])] = i
@@ -58,13 +84,14 @@ if __name__ == '__main__':
                 
                 winner = match[1]
                 loser = match[2]
-                winner_K = set_K(K, match[3],char_mapping)
-                loser_K = set_K(K, match[4],char_mapping)
                 
                 winner_rating = joint_elo_history[winner][-1][1]
                 loser_rating =  joint_elo_history[loser][-1][1]
                 
-                new_winner_rating, new_loser_rating = update_rating(winner_rating,loser_rating,winner_K, loser_K)
+                winner_choice = char_mapping[match[3]]
+                loser_choice = char_mapping[match[4]]
+                
+                new_winner_rating, new_loser_rating = update_rating(winner_rating,loser_rating,K, winner_choice, loser_choice)
 
                 joint_elo_history[winner].append((e_id, new_winner_rating))             
                 joint_elo_history[loser].append((e_id, new_loser_rating))         
