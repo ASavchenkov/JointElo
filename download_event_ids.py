@@ -1,6 +1,6 @@
 import queries
 import time
-import re#eeee
+import re
 from graphQLUtils import make_query
 import numpy as np
 

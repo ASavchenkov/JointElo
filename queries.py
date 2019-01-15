@@ -1,4 +1,3 @@
-
 tournament ='''
 query TournamentsByVideogame($perPage: Int, $page : Int) {
   tournaments(query: {
