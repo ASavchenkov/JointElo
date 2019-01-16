@@ -1,5 +1,5 @@
 tournament ='''
-query TournamentsByVideogame($perPage: Int, $page : Int) {
+query TournamentsByVideogame($perPage: Int, $page : Int, $gameID : Int) {
   tournaments(query: {
     perPage: $perPage
     page: $page
@@ -7,7 +7,7 @@ query TournamentsByVideogame($perPage: Int, $page : Int) {
     filter: {
       past: true
       videogameIds: [
-        1386
+        gameID
       ]
     }
   }) {

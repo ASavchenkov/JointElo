@@ -4,6 +4,8 @@ import re
 from graphQLUtils import make_query
 import numpy as np
 
+game_id = 1386
+
 #note that this doesn't care about tournaments, just the specific events we care about
 #specifically ones that say "Singles" in the name.
 def get_all_events():
@@ -12,7 +14,7 @@ def get_all_events():
     i = 0 
     while(not empty_page):
         i+=1
-        tourney_json = make_query(queries.tournament, {'perPage':50,'page':i}).json() 
+        tourney_json = make_query(queries.tournament, {'perPage':50,'page':i,'gameID':game_id}).json() 
         nodes = tourney_json['data']['tournaments']['nodes']
         print(type(nodes))
         if(nodes == None):
@@ -20,7 +22,7 @@ def get_all_events():
         else:
             for node in nodes:
                 for event in node['events']:
-                    if(re.search('singles',event['name'],re.IGNORECASE) and event['videogame']['id']==1386):
+                    if(re.search('singles',event['name'],re.IGNORECASE) and event['videogame']['id']==game_id):
                         event_ids.append(event['id'])
                         print(event)
         time.sleep(1)
@@ -32,4 +34,4 @@ if __name__ == "__main__":
     
     event_array = np.asarray(event_ids,dtype = np.int64)
     print(event_array)
-    np.savetxt('./data/event_ids.csv', event_array.astype(int),fmt='%i', delimiter = ',')
+    np.savetxt('./data/'+str(game_id)+'event_ids.csv', event_array.astype(int),fmt='%i', delimiter = ',')
