@@ -3,6 +3,7 @@ import time
 import re
 import json
 import os
+import traceback
 from graphQLUtils import make_query
 import numpy as np
 
@@ -14,7 +15,9 @@ def get_all_events(game_id):
     i = 0 
     while(not empty_page):
         i+=1
-        tourney_json = make_query(queries.tournament, {'perPage':100,'page':i,'gameID':game_id}).json() 
+        if(i>200): break #smash.gg can't seem to handle tournaments greater than 10,000
+        starttime = time.time()
+        tourney_json = make_query(queries.tournament, {'perPage':50,'page':i,'gameID':game_id}).json() 
         try:
             nodes = tourney_json['data']['tournaments']['nodes']
             if(nodes == None):
@@ -25,10 +28,15 @@ def get_all_events(game_id):
                         if(re.search('singles',event['name'],re.IGNORECASE) and event['videogame']['id']==int(game_id)):
                             event_ids.append(event['id'])
                             print(event)
-            time.sleep(1)
+
+            nowtime = time.time()
+            if(nowtime-starttime<1):
+                time.sleep(1-(time.time()-starttime))
             print(len(event_ids))
-        except:
+        except Exception:
             print('FAILED PAGE: ',i)
+            print(tourney_json)
+            traceback.print_exc()
     return event_ids
 
 if __name__ == "__main__":
@@ -36,14 +44,17 @@ if __name__ == "__main__":
     with open('./data/characters.json') as f:
         characters = json.load(f)
     
+    existing_dirs = [name for name in os.listdir('./data')]
+
     for game_id in characters:
-        event_ids = get_all_events(game_id)
-        
-        event_array = np.asarray(event_ids,dtype = np.int64)
-        print(event_array)
-        print('finished game_id: ', game_id,'| name: ' + characters[game_id]['game_name'])
-        try:
-            os.mkdir('./data/'+str(game_id))
-            np.savetxt('./data/'+str(game_id)+'/event_ids.csv', event_array.astype(int),fmt='%i', delimiter = ',')
-        except:
-            print('failed game_id: '+str(game_id))
+        if(game_id not in existing_dirs):
+            event_ids = get_all_events(game_id)
+            
+            event_array = np.asarray(event_ids,dtype = np.int64)
+            print(event_array)
+            print('finished game_id: ', game_id,'| name: ' + characters[game_id]['game_name'])
+            try:
+                os.mkdir('./data/'+str(game_id))
+                np.savetxt('./data/'+str(game_id)+'/event_ids.csv', event_array.astype(int),fmt='%i', delimiter = ',')
+            except:
+                print('failed game_id: '+str(game_id))
