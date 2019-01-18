@@ -7,7 +7,7 @@ query TournamentsByVideogame($perPage: Int, $page : Int, $gameID : Int) {
     filter: {
       past: true
       videogameIds: [
-        gameID
+        $gameID
       ]
     }
   }) {

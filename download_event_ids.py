@@ -1,37 +1,49 @@
 import queries
 import time
 import re
+import json
+import os
 from graphQLUtils import make_query
 import numpy as np
 
-game_id = 1386
-
 #note that this doesn't care about tournaments, just the specific events we care about
 #specifically ones that say "Singles" in the name.
-def get_all_events():
+def get_all_events(game_id):
     event_ids = list()
     empty_page = False
     i = 0 
     while(not empty_page):
         i+=1
-        tourney_json = make_query(queries.tournament, {'perPage':50,'page':i,'gameID':game_id}).json() 
-        nodes = tourney_json['data']['tournaments']['nodes']
-        print(type(nodes))
-        if(nodes == None):
-            empty_page = True
-        else:
-            for node in nodes:
-                for event in node['events']:
-                    if(re.search('singles',event['name'],re.IGNORECASE) and event['videogame']['id']==game_id):
-                        event_ids.append(event['id'])
-                        print(event)
-        time.sleep(1)
-        print(len(event_ids))
+        tourney_json = make_query(queries.tournament, {'perPage':100,'page':i,'gameID':game_id}).json() 
+        try:
+            nodes = tourney_json['data']['tournaments']['nodes']
+            if(nodes == None):
+                empty_page = True
+            else:
+                for node in nodes:
+                    for event in node['events']:
+                        if(re.search('singles',event['name'],re.IGNORECASE) and event['videogame']['id']==int(game_id)):
+                            event_ids.append(event['id'])
+                            print(event)
+            time.sleep(1)
+            print(len(event_ids))
+        except:
+            print('FAILED PAGE: ',i)
     return event_ids
 
 if __name__ == "__main__":
-    event_ids = get_all_events()
+
+    with open('./data/characters.json') as f:
+        characters = json.load(f)
     
-    event_array = np.asarray(event_ids,dtype = np.int64)
-    print(event_array)
-    np.savetxt('./data/'+str(game_id)+'event_ids.csv', event_array.astype(int),fmt='%i', delimiter = ',')
+    for game_id in characters:
+        event_ids = get_all_events(game_id)
+        
+        event_array = np.asarray(event_ids,dtype = np.int64)
+        print(event_array)
+        print('finished game_id: ', game_id,'| name: ' + characters[game_id]['game_name'])
+        try:
+            os.mkdir('./data/'+str(game_id))
+            np.savetxt('./data/'+str(game_id)+'/event_ids.csv', event_array.astype(int),fmt='%i', delimiter = ',')
+        except:
+            print('failed game_id: '+str(game_id))
