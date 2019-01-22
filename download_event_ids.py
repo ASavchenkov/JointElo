@@ -44,8 +44,7 @@ if __name__ == "__main__":
     with open('./data/characters.json') as f:
         characters = json.load(f)
     
-    existing_dirs = [name for name in os.listdir('./data')]
-
+    existing_dirs = [name for name in os.listdir('./data')] #careful. This also includes files
     for game_id in characters:
         if(game_id not in existing_dirs):
             event_ids = get_all_events(game_id)
