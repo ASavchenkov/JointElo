@@ -3,21 +3,36 @@ import time
 import json
 import os
 import traceback
+import sys
 from graphQLUtils import make_query
-import numpy as np
+
+def json_default_load(path, default):
+    try:
+        return json.load(open(path,'r'))
+    except:
+        print('faied to load')
+        print(path)
+        return default
+
+def write_three_datas(root_dir,failed,completed,phase_groups):
+
+    json.dump(failed,open(root_dir+'failed_events.json','w'))
+    json.dump(completed,open(root_dir+'completed_events.json','w'))
+    json.dump(phase_groups,open(root_dir+'phase_groups.json','w'))
 
 #we assume that all of the events are the correct type
-def get_all_phase_groups(event_array, game_id):
-    todo_events = set([x for x in event_array])
-    try:
-        completed_events = np.loadtxt('./data/'+game_id+'/completed_events.csv')
-        failed_events = np.loadtxt('./data/'+game_id+'/failed_events.csv')
-         
-    except:
-        e
-    phase_groups = list()
-    failed_event_ids = list()
-    for event_id in event_array:
+def get_all_phase_groups(game_id):
+    root_dir = 'data/'+game_id+'/'
+
+    all_events = set(json_default_load(root_dir+'event_ids.json',list()))
+    completed_events = json_default_load(root_dir+'completed_events.json',list())
+    failed_events = json_default_load(root_dir+'failed_events.json',list())
+    phase_groups = json_default_load(root_dir+'phase_groups.json',list())
+
+    todo_events = all_events.difference(set(completed_events),set(failed_events))
+    
+    
+    for event_id in todo_events:
         try:
             event_response = make_query(queries.event, {'id':str(event_id)}) 
             response_json = event_response.json()
@@ -25,15 +40,21 @@ def get_all_phase_groups(event_array, game_id):
             if( event_json['phaseGroups'] is not None ):
                 phase_groups.extend([(event_id, pg['id']) for pg in event_json['phaseGroups']])
                 print(len(phase_groups),event_json['name'],len(event_json['phaseGroups']))
+            completed_events.append(event_id)
             time.sleep(1)
-
+       
+        
+        except KeyboardInterrupt: #when ctrl-c is hit
+            write_three_datas(root_dir,failed_events,completed_events,phase_groups)
+            sys.exit()
         except Exception:
             print('failed: ',event_id)
             traceback.print_exc()
             print(event_json)
             print()
-            failed_event_ids.append(event_id)
-    return phase_groups,failed_event_ids
+            failed_events.append(event_id)
+
+    write_three_datas(root_dir,failed_events,completed_events,phase_groups)
 
 if __name__ == "__main__":
 
@@ -41,12 +62,6 @@ if __name__ == "__main__":
         characters = json.load(f)
     
     for game_id in characters:
-        if(not os.path.isfile('./data/'+game_id+'/phase_group_ids.csv')):
-            event_ids = np.loadtxt('./data/'+game_id+'/event_ids.csv').astype(np.int32)
-            print(event_ids)
-            phase_group_ids,failed_event_ids = get_all_phase_groups(event_ids)
+        if(not os.path.isfile('./data/'+game_id+'/phase_group_ids.json')):
+            get_all_phase_groups(game_id)
             
-            phase_group_array = np.asarray(phase_group_ids,dtype = np.int64)
-            failed_event_array = np.asarray(failed_event_ids, dtype= np.int64)
-            np.savetxt('./data/'+game_id+'/phase_group_ids.csv', phase_group_array.astype(int),fmt='%i', delimiter = ',')
-            np.savetxt('./data/'+game_id+'/failed_event_ids.csv', failed_event_array.astype(int),fmt='%i', delimiter = ',')

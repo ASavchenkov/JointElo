@@ -4,6 +4,7 @@ import re
 import json
 import os
 import traceback
+import json
 from graphQLUtils import make_query
 import numpy as np
 
@@ -49,11 +50,10 @@ if __name__ == "__main__":
         if(game_id not in existing_dirs):
             event_ids = get_all_events(game_id)
             
-            event_array = np.asarray(event_ids,dtype = np.int64)
-            print(event_array)
             print('finished game_id: ', game_id,'| name: ' + characters[game_id]['game_name'])
             try:
-                os.mkdir('./data/'+str(game_id))
-                np.savetxt('./data/'+str(game_id)+'/event_ids.csv', event_array.astype(int),fmt='%i', delimiter = ',')
+                os.mkdir('./data/'+game_id)
+                f = open('./data/'+game_id+'/event_ids.json','w')
+                json.dump(event_ids,f)
             except:
                 print('failed game_id: '+str(game_id))
