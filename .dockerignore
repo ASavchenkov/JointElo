@@ -1,0 +1,7 @@
+.git
+.gitignore
+Dockerfile
+.idea
+__pycache__
+venv
+# To prevent storing dev/temporary container data
