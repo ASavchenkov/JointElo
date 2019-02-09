@@ -15,10 +15,13 @@ def create_plot_div(which_plot):
         dcc.Graph(
             id=which_plot + ' Elo History',
             figure={
-                'data':[],
+                'data': [],
                 'layout': {
                     'title': which_plot + ' Elo History'
                 }
+            },
+            config={
+                'displaylogo': False,
             }
         ),
         dcc.RangeSlider(
@@ -37,6 +40,7 @@ def create_plot_div(which_plot):
 app.layout = html.Div(children=[
 
     create_plot_div('Character'),
+    create_plot_div('Player'),
 
 ])
 
@@ -53,6 +57,17 @@ def update_character_plot(char_cond_range):
                 ]
     }
 
+@app.callback(
+    Output(component_id='Player Elo History', component_property='figure'),
+    [Input(component_id='Player Conditional Range', component_property = 'value')]
+)
+def update_character_plot(player_cond_range):
+    return {
+        'data': [
+                    {'x': [1, 2, 3], 'y': [4, 1, 2], 'name': 'SF'},
+                    {'x': [1, 2, 3], 'y': [2, 4, 5], 'name': u'Montréal'},
+                ]
+    }
 
 if __name__ == '__main__':
     app.run_server(debug=True)
