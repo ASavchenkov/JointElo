@@ -12,9 +12,8 @@ import numpy as np
 #specifically ones that say "Singles" in the name.
 def get_all_events(game_id):
     event_ids = list()
-    empty_page = False
-    i = 0 
-    while(not empty_page):
+    i = 0
+    while(True):
         i+=1
         if(i>200): break #smash.gg can't seem to handle tournaments greater than 10,000
         starttime = time.time()
@@ -22,7 +21,7 @@ def get_all_events(game_id):
         try:
             nodes = tourney_json['data']['tournaments']['nodes']
             if(nodes == None):
-                empty_page = True
+                break
             else:
                 for node in nodes:
                     for event in node['events']:
