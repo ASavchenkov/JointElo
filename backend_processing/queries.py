@@ -13,6 +13,7 @@ query TournamentsByVideogame($perPage: Int, $page : Int, $gameID : Int) {
   }) {
     nodes {
       id
+      startAt
       events{
         id
         name

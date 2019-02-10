@@ -5,7 +5,8 @@ RUN apt-get clean \
     && apt-get -y update
 RUN apt-get -y install nginx \
     && apt-get -y install python3-dev \
-    && apt-get -y install build-essential
+    && apt-get -y install build-essential \
+    && apt-get -y install mongodb
 
 COPY requirements.txt /srv/flask_app/
 WORKDIR /srv/flask_app
