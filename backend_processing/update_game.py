@@ -4,7 +4,7 @@ import time
 import requests
 import json
 import traceback
-
+import math
 
 import queries
 from graphQLUtils import make_query
@@ -16,6 +16,10 @@ def upsert_one(collection, document):
     collection.update_one({'_id':document['_id']},{
         '$set': document
     }, upsert=True)
+
+def unset_processed(collection):
+    print(collection.find().count())
+    collection.update_many({},{'$set':{'processed':False}})
 
 # handles taking stuff out of the character csv and putting it into the db
 def insert_characters(db):
@@ -43,51 +47,66 @@ def insert_characters(db):
 # game_id comes as a string now.
 def update_tournaments(db):
     i=0
+
+
+    try: #this is a bad way to go about this but I don't want to write more code
+        max_ts = db['tournaments'].find_one(sort=[('startAt',-1)])['startAt']
+    except:
+        max_ts = 0
     while(True):
-        i+=1
-        if (i > 200): break  # smash.gg can't seem to handle tournaments greater than 10,000
-        starttime = time.time()
-        tourney_json = make_query(queries.tournament, {'perPage': 50, 'page': i}).json()
-        caught_up = False
+        per_page = 100
+        while(True):
+            starttime = time.time()
+            tourney_json = make_query(queries.tournament, {'perPage': int(per_page), 'startAt':max_ts+1}).json()
+            if 'data' in tourney_json:
+                break
+            print(tourney_json)
+            time.sleep(1)
+            per_page /= 2
+        print(max_ts, per_page)
+
         try:
             nodes = tourney_json['data']['tournaments']['nodes']
             if(nodes == None):
                 break
             else:
+                max_ts = nodes[-1]['startAt']
                 for node in nodes:
-                    if db['tournaments'].find_one({'_id': node['id']}):
-                        caught_up = True
                     upsert_one(db['tournaments'], {
                         '_id': node['id'],
                         'startAt': node['startAt'],
                         'events': node['events'],
                         'processed': False
                     })
-                print(i)
 
         except Exception:
-            print('FAILED PAGE: ', i)
+            print('FAILED PAGE: ', max_ts)
             print(tourney_json)
             traceback.print_exc()
+        sleep_time = 1-(time.time()-starttime)
+        if(sleep_time>0):
+            time.sleep(sleep_time)
 
-        if caught_up: break
-
-        nowtime = time.time()
-        if nowtime - starttime < 1:
-            time.sleep(1 - (time.time() - starttime))
 
 
 def extract_events(db):
     todo = db['tournaments'].find({'processed': False})
     for tournament in todo:
         print('extract_events: ',tournament)
-        if tournament['events'] is None: continue
+        if 'events' not in tournament or tournament['events'] is None:
+            db['tournaments'].update_one({'_id': tournament['_id']}, {
+                '$set': {
+                    'processed': True
+                }
+            })
+            continue
         for e in tournament['events']:
             starttime = time.time()
             upsert_one(db['events'], {
                 '_id': e['id'],
                 'parent': tournament['_id'],
                 'name': e['name'],
+                'slug': e['slug'],
                 'videogame': e['videogame']['id'],
                 'startAt': tournament['startAt'],
                 'processed': False
@@ -109,8 +128,8 @@ def get_pg(event_id, pg_id):
         return {}
 
 def get_phase_groups(db):
-    # todo = db['events'].find({'processed': False})
-    todo = db['events'].find()
+    todo = db['events'].find({'processed': False})
+    # todo = db['events'].find()
     for event in todo:
 
         starttime = time.time()
@@ -127,7 +146,12 @@ def get_phase_groups(db):
                         'raw_json': get_pg(event['_id'],pg['id']),
                         'processed': False
                     })
-                    print(pg['id'])
+                    print('phase_group',pg['id'])
+            db['events'].update_one({'_id': event['_id']}, {
+                '$set': {
+                    'processed': True
+                }
+            })
 
 
         except Exception:
@@ -135,11 +159,15 @@ def get_phase_groups(db):
             print(event_json)
             traceback.print_exc()
 
-        nowtime = time.time()
-        if nowtime - starttime < 1:
-            time.sleep(1 - (time.time() - starttime))
+        sleep_time = time.time()-starttime
+        if sleep_time>0:
+            time.sleep(sleep_time)
 
-
+#this turns phase groups into matches.
+def process_phase_groups(db):
+    todo = db['phase_groups'].find({'processed': False})
+    for group in todo:
+        pass
 if __name__ == '__main__':
     client = pymongo.MongoClient('mongodb://localhost:27017')
     db = client['joint_elo_base']
