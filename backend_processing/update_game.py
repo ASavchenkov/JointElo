@@ -17,9 +17,9 @@ def upsert_one(collection, document):
         '$set': document
     }, upsert=True)
 
-def unset_processed(collection):
+def unset_processed(collection, query = {}):
     print(collection.find().count())
-    collection.update_many({},{'$set':{'processed':False}})
+    collection.update_many(query,{'$set':{'processed':False}})
 
 # handles taking stuff out of the character csv and putting it into the db
 def insert_characters(db):
@@ -61,7 +61,7 @@ def update_tournaments(db):
             if 'data' in tourney_json:
                 break
             print(tourney_json)
-            time.sleep(1)
+            time.sleep(3/4)
             per_page /= 2
         print(max_ts, per_page)
 
@@ -83,22 +83,24 @@ def update_tournaments(db):
             print('FAILED PAGE: ', max_ts)
             print(tourney_json)
             traceback.print_exc()
-        sleep_time = 1-(time.time()-starttime)
+        sleep_time = 3/4-(time.time()-starttime)
         if(sleep_time>0):
             time.sleep(sleep_time)
 
-
+def set_processed(collection, item):
+    collection.update_one({'_id':item['_id']}, {
+        '$set': {
+            'processed' : True
+        }
+    })
 
 def extract_events(db):
     todo = db['tournaments'].find({'processed': False})
     for tournament in todo:
         print('extract_events: ',tournament)
+
         if 'events' not in tournament or tournament['events'] is None:
-            db['tournaments'].update_one({'_id': tournament['_id']}, {
-                '$set': {
-                    'processed': True
-                }
-            })
+            set_processed(db['tournaments'], tournament)
             continue
         for e in tournament['events']:
             starttime = time.time()
@@ -112,17 +114,13 @@ def extract_events(db):
                 'processed': False
             })
 
-        db['tournaments'].update_one({'_id':tournament['_id']}, {
-            '$set': {
-                'processed': True
-            }
-        })
+        set_processed(db['tournaments'], tournament)
 
 def get_pg(event_id, pg_id):
     try:
-        r_string = '''https://api.smash.gg/phase_group/''' + str(pg_id) + '?expand[]=sets'
-        response = requests.get(r_string)
-        return str(response.text)
+        r_string = '''https://api.smash.gg/phase_group/''' + str(pg_id) + '?expand[]=sets&expand[]=entrants'
+        response = requests.get(r_string).text
+        return json.loads(response)
     except Exception as e:
         print('failed: ', pg_id, e)
         return {}
@@ -138,20 +136,26 @@ def get_phase_groups(db):
             if(event_json['phaseGroups'] is not None):
                 pgs = event_json['phaseGroups']
                 for pg in pgs:
-
+                    raw_json = get_pg(event['_id'],pg['id'])
+                    try:
+                        team_size = len(raw_json['entities']['entrants'][0]['participantIds'])
+                    except:
+                        #if we can't get that info then boo hoo, we don't use those phase groups.
+                        team_size = -1
+                        pass
                     upsert_one(db['phase_groups'],{
                         '_id': pg['id'],
                         'parent': event['_id'],
                         'startAt': event['startAt'],
-                        'raw_json': get_pg(event['_id'],pg['id']),
-                        'processed': False
+                        'raw_json': raw_json,
+                        'videogame': event['videogame'],
+                        'processed': False,
+                        'team_size' : team_size
                     })
                     print('phase_group',pg['id'])
-            db['events'].update_one({'_id': event['_id']}, {
-                '$set': {
-                    'processed': True
-                }
-            })
+
+            set_processed(db['events'], event)
+
 
 
         except Exception:
@@ -159,15 +163,20 @@ def get_phase_groups(db):
             print(event_json)
             traceback.print_exc()
 
-        sleep_time = time.time()-starttime
+        sleep_time = 3/4-(time.time()-starttime)
         if sleep_time>0:
             time.sleep(sleep_time)
 
-#this turns phase groups into matches.
-def process_phase_groups(db):
-    todo = db['phase_groups'].find({'processed': False})
-    for group in todo:
-        pass
+def update_all_videogames(db):
+    phase_groups = db['phase_groups'].find({})
+    i = 0
+    for pg in phase_groups:
+        # print(db['events'].find_one({'_id':pg['parent']})['videogame'])
+        db['phase_groups'].update_one({'_id': pg['_id']}, {
+            '$set': {'videogame':db['events'].find_one({'_id':pg['parent']})['videogame']}
+        })
+        i+=1
+        print(i, pg['_id'])
 if __name__ == '__main__':
     client = pymongo.MongoClient('mongodb://localhost:27017')
     db = client['joint_elo_base']
